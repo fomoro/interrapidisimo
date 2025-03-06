@@ -5,6 +5,7 @@ using API.Data;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
+using AutoMapper;
 
 namespace API.Services
 {
@@ -24,43 +25,37 @@ namespace API.Services
     public class EstudianteService : IEstudianteService
     {
         private readonly AppDbContext _context;
+        private readonly IMapper _mapper;
 
-        public EstudianteService(AppDbContext context)
+        public EstudianteService(AppDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         public EstudianteViewModel CrearEstudiante(EstudianteViewModel estudianteViewModel)
         {
-            var estudiante = EstudianteMapping.ToModel(estudianteViewModel);
+            var estudiante = _mapper.Map<Estudiante>(estudianteViewModel);
             _context.Estudiantes.Add(estudiante);
             _context.SaveChanges();
 
-            return EstudianteMapping.ToViewModel(estudiante);
+            return _mapper.Map<EstudianteViewModel>(estudiante);
         }
 
         public List<EstudianteViewModel> ObtenerEstudiantes()
         {
             var estudiantes = _context.Estudiantes.ToList();
-            return estudiantes.Select(e => EstudianteMapping.ToViewModel(e)).ToList();
+            return _mapper.Map<List<EstudianteViewModel>>(estudiantes);
         }
 
         public EstudianteDetalleViewModel ObtenerEstudiantePorId(int id)
         {
             var estudiante = _context.Estudiantes
+                .Include(e => e.Registros)
+                .ThenInclude(r => r.Materia)
                 .FirstOrDefault(e => e.Id == id);
 
-            if (estudiante == null) return null;
-
-            var materias = _context.Registros
-                .Where(r => r.EstudianteId == id)
-                .Join(_context.Materias,
-                    registro => registro.MateriaId,
-                    materia => materia.Id,
-                    (registro, materia) => materia.Nombre)
-                .ToList();
-
-            return EstudianteMapping.ToDetalleViewModel(estudiante, materias);
+            return _mapper.Map<EstudianteDetalleViewModel>(estudiante);
         }
 
         public bool EliminarEstudiante(int id)
@@ -68,7 +63,6 @@ namespace API.Services
             var estudiante = _context.Estudiantes.FirstOrDefault(e => e.Id == id);
             if (estudiante == null) return false;
 
-            // Verificar si el estudiante tiene materias inscritas
             var tieneMaterias = _context.Registros.Any(r => r.EstudianteId == id);
             if (tieneMaterias)
             {
@@ -79,44 +73,21 @@ namespace API.Services
             _context.SaveChanges();
             return true;
         }
-       
+
         public EstudianteViewModel ActualizarEstudiante(int id, EstudianteViewModel estudianteViewModel)
         {
             var estudiante = _context.Estudiantes.FirstOrDefault(e => e.Id == id);
             if (estudiante == null) return null;
 
-            // Actualizar solo los campos proporcionados
-            estudiante.Nombre = estudianteViewModel.Nombre ?? estudiante.Nombre;
-            estudiante.Carrera = estudianteViewModel.Carrera ?? estudiante.Carrera;
+            // Mapear solo los campos que se pueden modificar
+            _mapper.Map(estudianteViewModel, estudiante);
+
+            // Asegurarse de que el Id no se modifique
+            estudiante.Id = id;
 
             _context.SaveChanges();
 
-            return EstudianteMapping.ToViewModel(estudiante);
-        }
-        
-        public async Task<List<VisibilidadViewModel>> ObtenerVisibilidadEstudiantes(int estudianteId)
-        {
-            // Obtener las materias del estudiante
-            var materiasEstudiante = await _context.Registros
-                .Where(r => r.EstudianteId == estudianteId)
-                .Select(r => r.MateriaId)
-                .ToListAsync();
-
-            var registros = await _context.Registros
-                .Where(r => r.EstudianteId != estudianteId) // Excluir al estudiante actual
-                .Include(r => r.Estudiante)
-                .Include(r => r.Materia)
-                    .ThenInclude(m => m.Profesor)
-                .ToListAsync(); // Cargar los datos en memoria
-
-            // Mapear los registros a ViewModel usando la clase de mapeo
-            var resultados = registros
-                .Select(r => VisibilidadMapping.ToViewModel(r, materiasEstudiante))
-                .OrderBy(r => r.Estudiante)
-                .ThenBy(r => r.Materia)
-                .ToList();
-
-            return resultados;
+            return _mapper.Map<EstudianteViewModel>(estudiante);
         }
 
         public async Task<List<CompaneroViewModel>> ObtenerCompanerosPorEstudianteId(int estudianteId)
@@ -136,18 +107,18 @@ namespace API.Services
 
             if (!materiasDelEstudiante.Any())
             {
-                throw new InvalidOperationException("No tiene materias asignadas");
+                throw new InvalidOperationException("No tiene materias asignadas.");
             }
 
-            // Obtener los compañeros de clase con las materias en común
-            var registrosCompaneros = await _context.Registros
-                .Where(r => materiasDelEstudiante.Contains(r.MateriaId) && r.EstudianteId != estudianteId)
+            // Obtener los registros de los compañeros de clase con materias en común
+            var companeros = await _context.Registros
                 .Include(r => r.Estudiante)
                 .Include(r => r.Materia)
+                .Where(r => materiasDelEstudiante.Contains(r.MateriaId) && r.EstudianteId != estudianteId)
                 .ToListAsync();
 
-            // Agrupar por compañero y listar las materias compartidas
-            var companerosAgrupados = registrosCompaneros
+            // Usar AutoMapper para transformar los datos
+            var companerosAgrupados = companeros
                 .GroupBy(r => r.Estudiante)
                 .Select(grupo => new CompaneroViewModel
                 {
@@ -156,7 +127,41 @@ namespace API.Services
                 })
                 .ToList();
 
-            return companerosAgrupados;
+            // Mapeo con AutoMapper
+            return _mapper.Map<List<CompaneroViewModel>>(companerosAgrupados);
         }
+
+        public async Task<List<VisibilidadViewModel>> ObtenerVisibilidadEstudiantes(int estudianteId)
+        {
+            // Obtener las materias en las que está inscrito el estudiante
+            var materiasEstudiante = await _context.Registros
+                .Where(r => r.EstudianteId == estudianteId)
+                .Select(r => r.MateriaId)
+                .ToListAsync();
+
+            // Obtener los registros de estudiantes en materias comunes o no
+            var registros = await _context.Registros
+                .Include(r => r.Estudiante)
+                .Include(r => r.Materia)
+                    .ThenInclude(m => m.Profesor)
+                .ToListAsync();
+
+            // Mapear los registros con AutoMapper y aplicar la lógica requerida
+            var resultados = registros
+                .Select(r =>
+                {
+                    var viewModel = _mapper.Map<VisibilidadViewModel>(r);
+                    viewModel.Estudiante = materiasEstudiante.Contains(r.MateriaId) && r.EstudianteId != estudianteId
+                        ? r.Estudiante.Nombre
+                        : ""; // Se asegura de asignar "" cuando no hay coincidencia
+                    return viewModel;
+                })
+                .OrderBy(r => r.Estudiante)
+                .ThenBy(r => r.Materia)
+                .ToList();
+
+            return resultados;
+        }        
+
     }
 }

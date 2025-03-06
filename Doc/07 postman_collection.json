@@ -98,36 +98,6 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://localhost:44304/api/Estudiante/7",
-							"protocol": "https",
-							"host": [
-								"localhost"
-							],
-							"port": "44304",
-							"path": [
-								"api",
-								"Estudiante",
-								"7"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Editar un Estudiante",
-					"request": {
-						"method": "PUT",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"nombre\": \"Alejandro Ramírez M\",\r\n  \"carrera\": \"Ingeniería de Software\"\r\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
 							"raw": "https://localhost:44304/api/Estudiante/11",
 							"protocol": "https",
 							"host": [
@@ -144,26 +114,30 @@
 					"response": []
 				},
 				{
-					"name": "Compañeros de Clase",
+					"name": "Editar un Estudiante",
 					"request": {
-						"method": "GET",
+						"method": "PUT",
 						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"nombre\": \"Alejandro Sol y Lluvia\",\r\n  \"carrera\": \"Ingeniería de Software\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
 						"url": {
-							"raw": "http://localhost/proyecto/api/comparten_materias.php?id=8",
-							"protocol": "http",
+							"raw": "https://localhost:44304/api/Estudiante/12",
+							"protocol": "https",
 							"host": [
 								"localhost"
 							],
+							"port": "44304",
 							"path": [
-								"proyecto",
 								"api",
-								"comparten_materias.php"
-							],
-							"query": [
-								{
-									"key": "id",
-									"value": "8"
-								}
+								"Estudiante",
+								"12"
 							]
 						}
 					},
@@ -297,7 +271,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"estudianteId\": 6,  // Santiago Vega\r\n    \"materiaId\": 11     // Ciencia de Datos\r\n}\r\n",
+							"raw": "{\r\n    \"estudianteId\": 12,  // Santiago Vega\r\n    \"materiaId\": 11     // Ciencia de Datos\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -320,26 +294,44 @@
 					"response": []
 				},
 				{
+					"name": "Compañeros de Clase",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "https://localhost:44304/api/Estudiante/1/companeros",
+							"protocol": "https",
+							"host": [
+								"localhost"
+							],
+							"port": "44304",
+							"path": [
+								"api",
+								"Estudiante",
+								"1",
+								"companeros"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Registros de otros estudiantes",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost/proyecto/api/registros_estudiantes.php?id=1",
-							"protocol": "http",
+							"raw": "https://localhost:44304/api/Estudiante/1/visibilidad",
+							"protocol": "https",
 							"host": [
 								"localhost"
 							],
+							"port": "44304",
 							"path": [
-								"proyecto",
 								"api",
-								"registros_estudiantes.php"
-							],
-							"query": [
-								{
-									"key": "id",
-									"value": "1"
-								}
+								"Estudiante",
+								"1",
+								"visibilidad"
 							]
 						}
 					},

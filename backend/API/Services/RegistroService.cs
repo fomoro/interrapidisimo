@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using API.Mapping;
+using AutoMapper;
 
 namespace API.Services
 {
@@ -17,10 +18,12 @@ namespace API.Services
     public class RegistroService : IRegistroService
     {
         private readonly AppDbContext _context;
+        private readonly IMapper _mapper;
 
-        public RegistroService(AppDbContext context)
+        public RegistroService(AppDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         public async Task<RegistroViewModel> CrearRegistro(RegistroViewModel registroViewModel)
@@ -87,8 +90,8 @@ namespace API.Services
 
             _context.Registros.Add(registro);
             await _context.SaveChangesAsync();
-
-            return RegistroMapping.ToViewModel(registro);
+            
+            return _mapper.Map<RegistroViewModel>(registro);
         }
     }
 }

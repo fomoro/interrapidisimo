@@ -1,4 +1,5 @@
 using API.Data;
+using API.Mapping;
 using API.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,17 @@ builder.Services.AddScoped<IEstudianteService, EstudianteService>();
 builder.Services.AddScoped<IMateriaService, MateriaService>();
 builder.Services.AddScoped<IProfesorService, ProfesorService>();
 builder.Services.AddScoped<IRegistroService, RegistroService>();
+
+
+var autoMapperProfiles = new[]
+{
+    typeof(EstudianteProfile),
+    typeof(ProfesorProfile),
+    typeof(MateriaProfile),
+    typeof(RegistroProfile)
+};
+builder.Services.AddAutoMapper(autoMapperProfiles);
+
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

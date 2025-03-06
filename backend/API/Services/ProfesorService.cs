@@ -1,9 +1,10 @@
-﻿// API/Services/ProfesorService.cs
-using API.Models;
+﻿using API.Models;
 using API.ViewModels;
 using API.Data;
 using System.Collections.Generic;
 using System.Linq;
+using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace API.Services
 {
@@ -16,36 +17,30 @@ namespace API.Services
     public class ProfesorService : IProfesorService
     {
         private readonly AppDbContext _context;
+        private readonly IMapper _mapper;
 
-        public ProfesorService(AppDbContext context)
+        public ProfesorService(AppDbContext context, IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         public List<ProfesorViewModel> ObtenerProfesores()
         {
-            return _context.Profesores
-                .Select(p => new ProfesorViewModel
-                {
-                    Id = p.Id,
-                    Nombre = p.Nombre
-                })
-                .ToList();
+            // Usar AutoMapper para mapear la lista de profesores
+            var profesores = _context.Profesores.ToList();
+            return _mapper.Map<List<ProfesorViewModel>>(profesores);
         }
 
         public ProfesorConMateriasViewModel ObtenerProfesorConMaterias(int id)
         {
+            // Buscar el profesor con sus materias
             var profesor = _context.Profesores
-                .Where(p => p.Id == id)
-                .Select(p => new ProfesorConMateriasViewModel
-                {
-                    Id = p.Id,
-                    Nombre = p.Nombre,
-                    Materias = p.Materias.Select(m => m.Nombre).ToList()
-                })
-                .FirstOrDefault();
+                .Include(p => p.Materias) // Incluye la relación de Materias
+                .FirstOrDefault(p => p.Id == id);
 
-            return profesor;
+            // Retornar el ViewModel mapeado con AutoMapper
+            return _mapper.Map<ProfesorConMateriasViewModel>(profesor);
         }
     }
 }

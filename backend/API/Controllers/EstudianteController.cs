@@ -2,7 +2,7 @@
 using API.Services;
 using API.ViewModels;
 using System.Collections.Generic;
-using System;
+using System.Threading.Tasks;
 
 namespace API.Controllers
 {
@@ -25,47 +25,23 @@ namespace API.Controllers
                 return BadRequest(new { error = "El nombre debe tener al menos 3 caracteres" });
             }
 
-            try
-            {
-                var estudiante = _estudianteService.CrearEstudiante(estudianteViewModel);
-                return CreatedAtAction(nameof(ObtenerEstudiantePorId), new { id = estudiante.Id }, estudiante);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
+            var estudiante = _estudianteService.CrearEstudiante(estudianteViewModel);
+            return CreatedAtAction(nameof(ObtenerEstudiantePorId), new { id = estudiante.Id }, estudiante);
         }
 
         [HttpGet]
         public IActionResult ObtenerEstudiantes()
         {
-            try
-            {
-                var estudiantes = _estudianteService.ObtenerEstudiantes();
-                return Ok(estudiantes);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
+            var estudiantes = _estudianteService.ObtenerEstudiantes();
+            return Ok(estudiantes);
         }
 
         [HttpGet("{id}")]
         public IActionResult ObtenerEstudiantePorId(int id)
         {
-            try
-            {
-                var estudiante = _estudianteService.ObtenerEstudiantePorId(id);
-                if (estudiante == null)
-                {
-                    return NotFound(new { error = "Estudiante no encontrado" });
-                }
-                return Ok(estudiante);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
+            var estudiante = _estudianteService.ObtenerEstudiantePorId(id);
+            if (estudiante == null) return NotFound(new { error = "Estudiante no encontrado" });
+            return Ok(estudiante);
         }
 
         [HttpPut("{id}")]
@@ -76,42 +52,19 @@ namespace API.Controllers
                 return BadRequest(new { error = "El nombre debe tener al menos 3 caracteres" });
             }
 
-            try
-            {
-                var estudiante = _estudianteService.ActualizarEstudiante(id, estudianteViewModel);
-                if (estudiante == null)
-                {
-                    return NotFound(new { error = "Estudiante no encontrado" });
-                }
-                return Ok(estudiante);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
+            var estudiante = _estudianteService.ActualizarEstudiante(id, estudianteViewModel);
+            if (estudiante == null) return NotFound(new { error = "Estudiante no encontrado" });
+            return Ok(estudiante);
         }
 
         [HttpDelete("{id}")]
         public IActionResult EliminarEstudiante(int id)
         {
-            try
-            {
-                var resultado = _estudianteService.EliminarEstudiante(id);
-                if (!resultado)
-                {
-                    return NotFound(new { error = "Estudiante no encontrado" });
-                }
-                return Ok(new { mensaje = "Eliminado correctamente" });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
+            var resultado = _estudianteService.EliminarEstudiante(id);
+            if (!resultado) return NotFound(new { error = "Estudiante no encontrado" });
+            return Ok(new { mensaje = "Eliminado correctamente" });
         }
+        
 
         [HttpGet("{id}/companeros")]
         public async Task<IActionResult> ObtenerCompanerosPorEstudianteId(int id)
@@ -134,25 +87,12 @@ namespace API.Controllers
         [HttpGet("{id}/visibilidad")]
         public async Task<IActionResult> ObtenerVisibilidadEstudiantes(int id)
         {
-            try
+            var resultados = await _estudianteService.ObtenerVisibilidadEstudiantes(id);
+            if (resultados == null || resultados.Count == 0)
             {
-                if (id <= 0)
-                {
-                    return BadRequest(new { error = "ID de estudiante no válido" });
-                }
-
-                var resultados = await _estudianteService.ObtenerVisibilidadEstudiantes(id);
-                if (resultados == null || resultados.Count == 0)
-                {
-                    return NotFound(new { error = "No se encontraron resultados para el estudiante especificado" });
-                }
-                return Ok(resultados);
+                return NotFound(new { error = "No se encontraron resultados para el estudiante especificado" });
             }
-            catch
-            {
-                return StatusCode(500, new { error = "Error al obtener la visibilidad de los estudiantes" });
-            }
+            return Ok(resultados);
         }
-
     }
 }
