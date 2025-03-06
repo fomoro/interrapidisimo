@@ -1,0 +1,11 @@
+API/
+│
+├── Controllers/         # Controladores que gestionan las solicitudes HTTP y responden a los endpoints.
+├── Data/                # Contiene el contexto de la base de datos para Entity Framework Core.
+├── Mapping/             # Configuración de mapeo entre modelos de dominio y ViewModels.
+├── Models/              # Modelos que representan las entidades de la base de datos.
+├── Services/            # Contiene la lógica de negocio y reglas para cada entidad.
+├── ViewModels/          # Clases para estructurar la respuesta de la API sin exponer los modelos de dominio.
+│
+├── Program.cs           # Configuración de la aplicación y el middleware.
+└── appsettings.json     # Configuración de la cadena de conexión a la base de datos y otros ajustes.
