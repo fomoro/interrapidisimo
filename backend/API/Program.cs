@@ -1,13 +1,18 @@
+using System.Text.Json.Serialization;
 using API.Data;
 using API.Mapping;
+using API.Repositories;
 using API.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configurar DbContext
+// Registrar el DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Registrar el repositorio
+builder.Services.AddScoped<EstudianteRepository, EstudianteRepository>();
 
 // Registrar servicios
 builder.Services.AddScoped<IEstudianteService, EstudianteService>();
@@ -23,10 +28,12 @@ var autoMapperProfiles = new[]
     typeof(MateriaProfile),
     typeof(RegistroProfile)
 };
+
+// Otros servicios
 builder.Services.AddAutoMapper(autoMapperProfiles);
-
-
 builder.Services.AddControllers();
+
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

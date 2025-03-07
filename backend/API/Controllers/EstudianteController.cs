@@ -58,13 +58,24 @@ namespace API.Controllers
         }
 
         [HttpDelete("{id}")]
-        public IActionResult EliminarEstudiante(int id)
+        public async Task<IActionResult> EliminarEstudiante(int id)
         {
-            var resultado = _estudianteService.EliminarEstudiante(id);
-            if (!resultado) return NotFound(new { error = "Estudiante no encontrado" });
-            return Ok(new { mensaje = "Eliminado correctamente" });
+            try
+            {
+                var resultado = await _estudianteService.EliminarEstudianteAsync(id);
+                if (!resultado) return NotFound(new { error = "Estudiante no encontrado" });
+                return Ok(new { mensaje = "Eliminado correctamente" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { error = "Error interno del servidor" });
+            }
         }
-        
+
 
         [HttpGet("{id}/companeros")]
         public async Task<IActionResult> ObtenerCompanerosPorEstudianteId(int id)

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using AutoMapper;
+using API.Repositories;
 
 namespace API.Services
 {
@@ -14,111 +15,77 @@ namespace API.Services
         EstudianteViewModel CrearEstudiante(EstudianteViewModel estudianteViewModel);
         List<EstudianteViewModel> ObtenerEstudiantes();
         EstudianteDetalleViewModel ObtenerEstudiantePorId(int id);
-        bool EliminarEstudiante(int id);
+        Task<bool> EliminarEstudianteAsync(int id);
         EstudianteViewModel ActualizarEstudiante(int id, EstudianteViewModel estudianteViewModel);
         Task<List<CompaneroViewModel>> ObtenerCompanerosPorEstudianteId(int estudianteId);
         Task<List<VisibilidadViewModel>> ObtenerVisibilidadEstudiantes(int estudianteId);
-
 
     }
 
     public class EstudianteService : IEstudianteService
     {
-        private readonly AppDbContext _context;
+        private readonly EstudianteRepository _estudianteRepository;
         private readonly IMapper _mapper;
 
-        public EstudianteService(AppDbContext context, IMapper mapper)
+        public EstudianteService(EstudianteRepository estudianteRepository, IMapper mapper)
         {
-            _context = context;
+            _estudianteRepository = estudianteRepository;
             _mapper = mapper;
         }
 
         public EstudianteViewModel CrearEstudiante(EstudianteViewModel estudianteViewModel)
         {
             var estudiante = _mapper.Map<Estudiante>(estudianteViewModel);
-            _context.Estudiantes.Add(estudiante);
-            _context.SaveChanges();
-
+            estudiante = _estudianteRepository.CrearEstudianteAsync(estudiante).Result;
             return _mapper.Map<EstudianteViewModel>(estudiante);
         }
 
         public List<EstudianteViewModel> ObtenerEstudiantes()
         {
-            var estudiantes = _context.Estudiantes.ToList();
+            var estudiantes = _estudianteRepository.ObtenerEstudiantesAsync().Result;
             return _mapper.Map<List<EstudianteViewModel>>(estudiantes);
         }
 
         public EstudianteDetalleViewModel ObtenerEstudiantePorId(int id)
         {
-            var estudiante = _context.Estudiantes
-                .Include(e => e.Registros)
-                .ThenInclude(r => r.Materia)
-                .FirstOrDefault(e => e.Id == id);
-
+            var estudiante = _estudianteRepository.ObtenerEstudiantePorIdAsync(id).Result;
             return _mapper.Map<EstudianteDetalleViewModel>(estudiante);
-        }
+        }        
 
-        public bool EliminarEstudiante(int id)
+        public async Task<bool> EliminarEstudianteAsync(int id)
         {
-            var estudiante = _context.Estudiantes.FirstOrDefault(e => e.Id == id);
+            var estudiante = await _estudianteRepository.ObtenerEstudiantePorIdAsync(id);
             if (estudiante == null) return false;
 
-            var tieneMaterias = _context.Registros.Any(r => r.EstudianteId == id);
+            var tieneMaterias = await _estudianteRepository.TieneMateriasInscritas(id);
             if (tieneMaterias)
             {
                 throw new InvalidOperationException("No se puede eliminar un estudiante con materias inscritas");
             }
 
-            _context.Estudiantes.Remove(estudiante);
-            _context.SaveChanges();
-            return true;
+            return await _estudianteRepository.EliminarEstudianteAsync(id);
         }
 
         public EstudianteViewModel ActualizarEstudiante(int id, EstudianteViewModel estudianteViewModel)
         {
-            var estudiante = _context.Estudiantes.FirstOrDefault(e => e.Id == id);
+            var estudiante = _estudianteRepository.ObtenerEstudiantePorIdAsync(id).Result;
             if (estudiante == null) return null;
 
-            // Mapear solo los campos que se pueden modificar
             _mapper.Map(estudianteViewModel, estudiante);
-
-            // Asegurarse de que el Id no se modifique
-            estudiante.Id = id;
-
-            _context.SaveChanges();
+            estudiante = _estudianteRepository.ActualizarEstudianteAsync(estudiante).Result;
 
             return _mapper.Map<EstudianteViewModel>(estudiante);
         }
 
         public async Task<List<CompaneroViewModel>> ObtenerCompanerosPorEstudianteId(int estudianteId)
         {
-            // Verificar si el estudiante existe
-            var estudianteExiste = await _context.Estudiantes.AnyAsync(e => e.Id == estudianteId);
-            if (!estudianteExiste)
-            {
-                throw new KeyNotFoundException("No se encontró el ID del estudiante.");
-            }
+            var registros = await _estudianteRepository.ObtenerRegistrosPorEstudianteIdAsync(estudianteId);
+            var materiasIds = registros.Select(r => r.MateriaId).ToList();
 
-            // Obtener las materias en las que está inscrito el estudiante
-            var materiasDelEstudiante = await _context.Registros
-                .Where(r => r.EstudianteId == estudianteId)
-                .Select(r => r.MateriaId)
-                .ToListAsync();
+            var companerosRegistros = await _estudianteRepository.ObtenerRegistrosPorMateriasAsync(materiasIds);
 
-            if (!materiasDelEstudiante.Any())
-            {
-                throw new InvalidOperationException("No tiene materias asignadas.");
-            }
-
-            // Obtener los registros de los compañeros de clase con materias en común
-            var companeros = await _context.Registros
-                .Include(r => r.Estudiante)
-                .Include(r => r.Materia)
-                .Where(r => materiasDelEstudiante.Contains(r.MateriaId) && r.EstudianteId != estudianteId)
-                .ToListAsync();
-
-            // Usar AutoMapper para transformar los datos
-            var companerosAgrupados = companeros
+            var companerosAgrupados = companerosRegistros
+                .Where(r => r.EstudianteId != estudianteId)
                 .GroupBy(r => r.Estudiante)
                 .Select(grupo => new CompaneroViewModel
                 {
@@ -127,33 +94,21 @@ namespace API.Services
                 })
                 .ToList();
 
-            // Mapeo con AutoMapper
             return _mapper.Map<List<CompaneroViewModel>>(companerosAgrupados);
         }
 
         public async Task<List<VisibilidadViewModel>> ObtenerVisibilidadEstudiantes(int estudianteId)
         {
-            // Obtener las materias en las que está inscrito el estudiante
-            var materiasEstudiante = await _context.Registros
-                .Where(r => r.EstudianteId == estudianteId)
-                .Select(r => r.MateriaId)
-                .ToListAsync();
+            var materiasEstudiante = await _estudianteRepository.ObtenerMateriasEstudianteAsync(estudianteId);
+            var registros = await _estudianteRepository.ObtenerRegistrosConEstudianteMateriaProfesorAsync();
 
-            // Obtener los registros de estudiantes en materias comunes o no
-            var registros = await _context.Registros
-                .Include(r => r.Estudiante)
-                .Include(r => r.Materia)
-                    .ThenInclude(m => m.Profesor)
-                .ToListAsync();
-
-            // Mapear los registros con AutoMapper y aplicar la lógica requerida
             var resultados = registros
                 .Select(r =>
                 {
                     var viewModel = _mapper.Map<VisibilidadViewModel>(r);
                     viewModel.Estudiante = materiasEstudiante.Contains(r.MateriaId) && r.EstudianteId != estudianteId
                         ? r.Estudiante.Nombre
-                        : ""; // Se asegura de asignar "" cuando no hay coincidencia
+                        : "";
                     return viewModel;
                 })
                 .OrderBy(r => r.Estudiante)
@@ -161,7 +116,6 @@ namespace API.Services
                 .ToList();
 
             return resultados;
-        }        
-
+        }
     }
 }
