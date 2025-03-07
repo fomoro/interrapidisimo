@@ -12,7 +12,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Registrar el repositorio
-builder.Services.AddScoped<EstudianteRepository, EstudianteRepository>();
+builder.Services.AddScoped<IEstudianteRepository, EstudianteRepository>();
+builder.Services.AddScoped<IMateriaRepository, MateriaRepository>();
+builder.Services.AddScoped<IProfesorRepository, ProfesorRepository>();
+builder.Services.AddScoped<IRegistroRepository, RegistroRepository>();
 
 // Registrar servicios
 builder.Services.AddScoped<IEstudianteService, EstudianteService>();

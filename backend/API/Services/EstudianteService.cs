@@ -24,10 +24,10 @@ namespace API.Services
 
     public class EstudianteService : IEstudianteService
     {
-        private readonly EstudianteRepository _estudianteRepository;
+        private readonly IEstudianteRepository _estudianteRepository;
         private readonly IMapper _mapper;
 
-        public EstudianteService(EstudianteRepository estudianteRepository, IMapper mapper)
+        public EstudianteService(IEstudianteRepository estudianteRepository, IMapper mapper)
         {
             _estudianteRepository = estudianteRepository;
             _mapper = mapper;

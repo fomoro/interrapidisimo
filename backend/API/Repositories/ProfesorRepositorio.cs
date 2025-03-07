@@ -1,24 +1,34 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using API.Data;
+﻿using API.Data;
 using API.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace API.Repositories
 {
-    public interface IProfesorRepositorio : IRepositorioGenerico<Profesor>
+    public interface IProfesorRepository
     {
-        // Aquí puedes agregar métodos específicos para Profesor si es necesario
+        List<Profesor> ObtenerProfesores();
+        Profesor ObtenerProfesorPorId(int id);
     }
 
-    public class ProfesorRepositorio : RepositorioGenerico<Profesor>, IProfesorRepositorio
+    public class ProfesorRepository : IProfesorRepository
     {
         private readonly AppDbContext _context;
 
-        public ProfesorRepositorio(AppDbContext context) : base(context)
+        public ProfesorRepository(AppDbContext context)
         {
             _context = context;
         }
 
-        // Implementa métodos específicos para Profesor si es necesario
+        public List<Profesor> ObtenerProfesores()
+        {
+            return _context.Profesores.ToList();
+        }
+
+        public Profesor ObtenerProfesorPorId(int id)
+        {
+            return _context.Profesores.Include(p => p.Materias).FirstOrDefault(p => p.Id == id);
+        }
     }
 }

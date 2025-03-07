@@ -1,10 +1,12 @@
-﻿using API.Models;
+﻿// API/Services/MateriaService.cs
+using API.Models;
 using API.ViewModels;
 using API.Data;
 using System.Collections.Generic;
 using System.Linq;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using API.Repositories;
 
 namespace API.Services
 {
@@ -16,32 +18,24 @@ namespace API.Services
 
     public class MateriaService : IMateriaService
     {
-        private readonly AppDbContext _context;
+        private readonly IMateriaRepository _materiaRepository;
         private readonly IMapper _mapper;
 
-        public MateriaService(AppDbContext context, IMapper mapper)
+        public MateriaService(IMateriaRepository materiaRepository, IMapper mapper)
         {
-            _context = context;
+            _materiaRepository = materiaRepository;
             _mapper = mapper;
         }
 
         public List<MateriaViewModel> ObtenerMaterias()
         {
-            // Usar AutoMapper para mapear la lista
-            var materias = _context.Materias
-                .Include(m => m.Profesor) // Incluir la relación Profesor
-                .ToList();
-
+            var materias = _materiaRepository.ObtenerMaterias();
             return _mapper.Map<List<MateriaViewModel>>(materias);
         }
 
         public MateriaViewModel ObtenerMateriaPorId(int id)
         {
-            // Buscar una materia con el profesor
-            var materia = _context.Materias
-                .Include(m => m.Profesor) // Incluir la relación Profesor
-                .FirstOrDefault(m => m.Id == id);
-
+            var materia = _materiaRepository.ObtenerMateriaPorId(id);
             return _mapper.Map<MateriaViewModel>(materia);
         }
     }

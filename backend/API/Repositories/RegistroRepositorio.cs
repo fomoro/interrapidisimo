@@ -1,24 +1,55 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using API.Data;
+﻿using API.Data;
 using API.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace API.Repositories
 {
-    public interface IRegistroRepositorio : IRepositorioGenerico<Registro>
+    public interface IRegistroRepository
     {
-        // Aquí puedes agregar métodos específicos para Registro si es necesario
+        void AgregarRegistro(Registro registro);        
     }
 
-    public class RegistroRepositorio : RepositorioGenerico<Registro>, IRegistroRepositorio
+    public class RegistroRepository : IRegistroRepository
     {
         private readonly AppDbContext _context;
 
-        public RegistroRepositorio(AppDbContext context) : base(context)
+        public RegistroRepository(AppDbContext context)
         {
             _context = context;
         }
 
-        // Implementa métodos específicos para Registro si es necesario
+        public List<Registro> ObtenerRegistros()
+        {
+            return _context.Registros.Include(r => r.Estudiante).Include(r => r.Materia).ToList();
+        }
+
+        public Registro ObtenerRegistroPorId(int id)
+        {
+            return _context.Registros.Include(r => r.Estudiante).Include(r => r.Materia).FirstOrDefault(r => r.Id == id);
+        }
+
+        public void AgregarRegistro(Registro registro)
+        {
+            _context.Registros.Add(registro);
+            _context.SaveChanges();
+        }
+
+        public void ActualizarRegistro(Registro registro)
+        {
+            _context.Entry(registro).State = EntityState.Modified;
+            _context.SaveChanges();
+        }
+
+        public void EliminarRegistro(int id)
+        {
+            var registro = _context.Registros.Find(id);
+            if (registro != null)
+            {
+                _context.Registros.Remove(registro);
+                _context.SaveChanges();
+            }
+        }
     }
 }

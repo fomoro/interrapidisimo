@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using API.Mapping;
 using AutoMapper;
+using API.Repositories;
+using System;
+using System.Collections.Generic;
 
 namespace API.Services
 {
@@ -17,25 +20,27 @@ namespace API.Services
 
     public class RegistroService : IRegistroService
     {
-        private readonly AppDbContext _context;
+        private readonly IRegistroRepository _registroRepository;
+        private readonly IEstudianteRepository _estudianteRepository;
         private readonly IMapper _mapper;
+        private readonly AppDbContext _context;
 
-        public RegistroService(AppDbContext context, IMapper mapper)
+        public RegistroService(IRegistroRepository registroRepository, IEstudianteRepository estudianteRepository, IMapper mapper, AppDbContext context)
         {
-            _context = context;
+            _registroRepository = registroRepository;
+            _estudianteRepository = estudianteRepository;
             _mapper = mapper;
+            _context = context;
         }
 
         public async Task<RegistroViewModel> CrearRegistro(RegistroViewModel registroViewModel)
         {
-            // Validar que el estudiante existe
-            var estudiante = await _context.Estudiantes.FindAsync(registroViewModel.EstudianteId);
+            var estudiante = await _estudianteRepository.ObtenerEstudiantePorIdAsync(registroViewModel.EstudianteId);
             if (estudiante == null)
             {
                 throw new InvalidOperationException("Datos inválidos: estudiante no encontrado");
             }
 
-            // Validar que la materia existe y cargar el profesor
             var materia = await _context.Materias
                 .Include(m => m.Profesor)
                 .FirstOrDefaultAsync(m => m.Id == registroViewModel.MateriaId);
@@ -44,7 +49,6 @@ namespace API.Services
                 throw new InvalidOperationException("Datos inválidos: materia no encontrada");
             }
 
-            // Validar que el estudiante no esté ya inscrito en la materia
             var existeRegistro = await _context.Registros
                 .AnyAsync(r => r.EstudianteId == registroViewModel.EstudianteId && r.MateriaId == registroViewModel.MateriaId);
             if (existeRegistro)
@@ -52,16 +56,12 @@ namespace API.Services
                 throw new InvalidOperationException("El estudiante ya está inscrito en esta materia");
             }
 
-            // Validar que el estudiante no tenga más de 3 materias
-            var registrosEstudiante = await _context.Registros
-                .Where(r => r.EstudianteId == registroViewModel.EstudianteId)
-                .ToListAsync();
+            var registrosEstudiante = await _estudianteRepository.ObtenerRegistrosPorEstudianteIdAsync(registroViewModel.EstudianteId);
             if (registrosEstudiante.Count >= 3)
             {
                 throw new InvalidOperationException("Máximo 3 materias por estudiante");
             }
 
-            // Validar que el estudiante no tenga materias con el mismo profesor
             foreach (var reg in registrosEstudiante)
             {
                 var mat = await _context.Materias
@@ -73,7 +73,6 @@ namespace API.Services
                 }
             }
 
-            // Validar que la materia no tenga más de 30 estudiantes
             var totalEstudiantes = await _context.Registros
                 .CountAsync(r => r.MateriaId == registroViewModel.MateriaId);
             if (totalEstudiantes >= 30)
@@ -81,16 +80,8 @@ namespace API.Services
                 throw new InvalidOperationException("La materia ha alcanzado el límite de estudiantes");
             }
 
-            // Crear el registro
-            var registro = new Registro
-            {
-                EstudianteId = registroViewModel.EstudianteId,
-                MateriaId = registroViewModel.MateriaId
-            };
-
-            _context.Registros.Add(registro);
-            await _context.SaveChangesAsync();
-            
+            var registro = _mapper.Map<Registro>(registroViewModel);
+            _registroRepository.AgregarRegistro(registro);
             return _mapper.Map<RegistroViewModel>(registro);
         }
     }

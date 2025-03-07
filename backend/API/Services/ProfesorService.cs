@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using API.Repositories;
 
 namespace API.Services
 {
@@ -16,30 +17,24 @@ namespace API.Services
 
     public class ProfesorService : IProfesorService
     {
-        private readonly AppDbContext _context;
+        private readonly IProfesorRepository _profesorRepository;
         private readonly IMapper _mapper;
 
-        public ProfesorService(AppDbContext context, IMapper mapper)
+        public ProfesorService(IProfesorRepository profesorRepository, IMapper mapper)
         {
-            _context = context;
+            _profesorRepository = profesorRepository;
             _mapper = mapper;
         }
 
         public List<ProfesorViewModel> ObtenerProfesores()
         {
-            // Usar AutoMapper para mapear la lista de profesores
-            var profesores = _context.Profesores.ToList();
+            var profesores = _profesorRepository.ObtenerProfesores();
             return _mapper.Map<List<ProfesorViewModel>>(profesores);
         }
 
         public ProfesorConMateriasViewModel ObtenerProfesorConMaterias(int id)
         {
-            // Buscar el profesor con sus materias
-            var profesor = _context.Profesores
-                .Include(p => p.Materias) // Incluye la relación de Materias
-                .FirstOrDefault(p => p.Id == id);
-
-            // Retornar el ViewModel mapeado con AutoMapper
+            var profesor = _profesorRepository.ObtenerProfesorPorId(id);
             return _mapper.Map<ProfesorConMateriasViewModel>(profesor);
         }
     }
